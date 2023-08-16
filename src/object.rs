@@ -13,11 +13,36 @@ pub struct BBox3D {
 }
 
 #[derive(Clone, Debug)]
-pub struct TrackingObject {
+pub struct OutputObject {
     pub bbox: BBox3D,
     pub timestamp: u64,
     pub weak_class: Option<String>,
     pub track_id: Option<usize>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TrackingObject {
+    pub bbox: BBox3D,
+    pub timestamp: u64,
+    pub frame_id: usize,
+    pub weak_class: Option<String>,
+    pub track_id: Option<usize>,
+    pub best_match_track_id: Option<usize>,
+}
+
+impl TrackingObject {
+    pub fn change_bbox_heading_to_long_axis(&mut self) {
+        let bbox = &mut self.bbox;
+        if bbox.size_x < bbox.size_y {
+            let dir_left = bbox.direction_left();
+            let yaw = dir_left.y.atan2(dir_left.x);
+            let na_rotation = UnitQuaternion::from_euler_angles(0.0, 0.0, yaw);
+            bbox.rotation = na_rotation;
+            let tmp = bbox.size_x;
+            bbox.size_x = bbox.size_y;
+            bbox.size_y = tmp;
+        }
+    }
 }
 
 impl BBox3D {
