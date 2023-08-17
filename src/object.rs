@@ -15,16 +15,15 @@ pub struct BBox3D {
 #[derive(Clone, Debug)]
 pub struct OutputObject {
     pub bbox: BBox3D,
-    pub timestamp: u64,
+    pub timestamp_ns: u64,
+    pub track_id: usize,
     pub weak_class: Option<String>,
-    pub track_id: Option<usize>,
 }
 
 #[derive(Clone, Debug)]
 pub struct TrackingObject {
     pub bbox: BBox3D,
-    pub timestamp: u64,
-    pub frame_id: usize,
+    pub timestamp_ns: u64,
     pub weak_class: Option<String>,
     pub track_id: Option<usize>,
     pub best_match_track_id: Option<usize>,

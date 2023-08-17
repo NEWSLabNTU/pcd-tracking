@@ -25,88 +25,6 @@ pub struct WeakClass {
     pub max_height: f64,
 }
 
-/// This struct classifies a [BBoxPvrcnn] bounding box with the
-/// provided sizes in the in
-/// [WeakClassConfig](crate::box_enhance::WeakClassConfig).
-///
-/// # Input
-///
-/// * `bbox`: The bounding box to be classified
-/// * `config`: The config file that contains the sizes to determine the class.
-///
-/// # Return
-///
-/// An option of [WeakClass]. If the size does not match any of the
-/// provided sizes in the config file, `None` will be returned.
-///
-/// # Example usage
-///
-/// ```rust
-/// let bbox = protos::BBoxPvrcnn{
-///     x: 0,
-///     y: 0,
-///     z: 0,
-///     dx: 4,
-///     dy: 2,
-///     dz: 2,
-///     heading: 0,
-///     ...// omitted
-/// };
-/// let config: config::Config = Json5Path::open_and_take("./example_config.json5")?;
-/// let classifier = WeakClassifier::new(config.weak_class_conf_vec.as_ref().unwrap());
-/// let weak_class = classifier.classify_one(&bbox);
-/// let correct_weak_class = WeakClass{
-///     class: "Car",
-///     ... // omitted
-/// };
-/// asssert!(weak_class == Some(correct_weak_class))
-/// ```
-///
-/// With the `./example_config.json5` as:
-///
-/// ```json5
-/// "weak_class_conf_vec": [{
-///     "class": "Scooter",
-///     "class_id": 0,
-///     "min_length": 1.0,
-///     "min_width": 0.5,
-///     "min_height": 0.0,
-///     "max_length": 4.0,
-///     "max_width": 1.0,
-///     "max_height": 2.0,
-///     },
-///     {
-///     "class": "Car",
-///     "class_id": 1,
-///     "min_length": 2.0,
-///     "min_width": 0.5,
-///     "min_height": 0.0,
-///     "max_length": 5.5,
-///     "max_width": 3.0,
-///     "max_height": 2.0,
-///     },
-///     {
-///     "class": "Truck",
-///     "class_id": 2,
-///     "min_length": 2.0,
-///     "min_width": 1.0,
-///     "min_height": 1.3,
-///     "max_length": 10.0,
-///     "max_width": 3.5,
-///     "max_height": 3.0,
-///     },
-///     {
-///     "class": "Other",
-///     "class_id": 3,
-///     "min_length": 2.0,
-///     "min_width": 1.0,
-///     "min_height": 1.3,
-///     "max_length": 30.0,
-///     "max_width": 30.0,
-///     "max_height": 30.0,
-/// }],
-/// ```
-///
 #[derive(Clone, Debug)]
 pub struct WeakClassifier {
     weak_classes: Vec<WeakClass>,
@@ -140,51 +58,34 @@ impl WeakClassifier {
     }
 }
 
-pub struct HistoricWeakClassUpdater {
-    weak_classes: Vec<WeakClass>,
-}
+pub fn update_class_from_historic_classes(
+    mut objects: Vec<TrackingObject>,
+    track_attr_map: &mut TrackAttrMap,
+) -> Vec<TrackingObject> {
+    let track_ids: Vec<usize> = track_attr_map.keys().cloned().collect();
+    objects
+        .iter_mut()
+        .filter(|obj| track_ids.contains(&&obj.track_id.unwrap()))
+        .for_each(|obj| {
+            let track_id = obj.track_id.unwrap();
 
-impl HistoricWeakClassUpdater {
-    pub fn new(weak_classes: Vec<WeakClass>) -> Self {
-        Self { weak_classes }
-    }
+            // Find corresponding track attribute
+            let track_attr = track_attr_map.get_mut(&track_id).unwrap();
 
-    // todo: Add doc
-    pub fn update_class_from_historic_classes(
-        &self,
-        mut objects: Vec<TrackingObject>,
-        track_attr_map: &mut TrackAttrMap,
-    ) -> Vec<TrackingObject> {
-        let track_ids: Vec<usize> = track_attr_map.keys().cloned().collect();
-        objects
-            .iter_mut()
-            .filter(|obj| track_ids.contains(&&obj.track_id.unwrap()))
-            .for_each(|obj| {
-                let track_id = obj.track_id.unwrap();
+            // Assign track class from the object class
+            if let Some(class) = &obj.weak_class {
+                track_attr.historic_class_names.push(class.clone());
+            }
 
-                // Find corresponding track attribute
-                let track_attr = track_attr_map.get_mut(&track_id).unwrap();
+            // Choose the most common class in last 10 recent object classes.
+            let max_class = find_common_class(&track_attr.historic_class_names);
 
-                // Assign track class from the object class
-                if let Some(class) = &obj.weak_class {
-                    track_attr.historic_class_names.push(class.clone());
-                }
-
-                // Choose the most common class in last 10 recent object classes.
-                let max_class = find_common_class(&track_attr.historic_class_names);
-
-                // Update class name if most common class is available
-                if let Some(max_class) = max_class {
-                    obj.weak_class = Some(max_class.to_string());
-                    let weak_class = self
-                        .weak_classes
-                        .iter()
-                        .find(|weak_class| weak_class.class == max_class)
-                        .unwrap();
-                }
-            });
-        return objects;
-    }
+            // Update class name if most common class is available
+            if let Some(max_class) = max_class {
+                obj.weak_class = Some(max_class.to_string());
+            }
+        });
+    return objects;
 }
 
 fn find_common_class(historic_classes: &[String]) -> Option<&str> {

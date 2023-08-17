@@ -57,7 +57,7 @@ impl TrackAttributeUpdater {
         } = *self;
 
         // Update Kalman filter
-        let time_diff = new_object.timestamp - attrs.objects.back().unwrap().timestamp;
+        let time_diff = new_object.timestamp_ns - attrs.objects.back().unwrap().timestamp_ns;
         let measurement = matrix!(new_bbox.center_x as f32;
                                   new_bbox.center_y as f32);
         attrs.kalman_filter.update(time_diff, measurement);

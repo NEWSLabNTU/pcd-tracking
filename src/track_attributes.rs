@@ -81,9 +81,9 @@ impl TrackAttributes {
         let init_state = KalmanState {
             pos_x: ref_obj.bbox.center_x as f32,
             pos_y: ref_obj.bbox.center_y as f32,
-            ..self.kalman_filter.state.clone() /* ..track_attr.kalman_filter.predict(time_diff).clone() */
+            ..self.kalman_filter.state.clone()
         };
-        let time_diff = (curr_time - ref_obj.timestamp) as f32;
+        let time_diff = (curr_time - ref_obj.timestamp_ns) as f32;
         let time_diff = time_diff / 1_000_000_000.0;
         let f = matrix![1., time_diff, 0.5 * time_diff.powf(2.), 0., 0., 0.;
                         0., 1., time_diff, 0., 0., 0.;
@@ -269,7 +269,7 @@ fn predict_kalman_filter_from_other_tracks(
                 .rev()
                 .tuple_windows()
                 .fold(init_kf, |mut kf, (obj1, obj2)| {
-                    let time_diff = obj1.timestamp - obj2.timestamp;
+                    let time_diff = obj1.timestamp_ns - obj2.timestamp_ns;
                     let measurement = matrix!(obj2.bbox.center_x as f32;obj2.bbox.center_y as f32);
                     kf.update(time_diff, measurement);
                     kf

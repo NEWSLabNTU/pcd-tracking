@@ -36,10 +36,6 @@ impl IouMatrix {
             iou: *entry.weight,
         })
     }
-
-    pub fn len(&self) -> usize {
-        self.matrix.len()
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -104,7 +100,7 @@ impl IouMatrixBuilder {
                     .iter()
                     .filter_map(|&(prev_track_id, track_attr)| {
                         let predicted_track_bboxes =
-                            track_attr.predict_track_bboxes(curr_obj.timestamp, 10);
+                            track_attr.predict_track_bboxes(curr_obj.timestamp_ns, 10);
 
                         let max_iou = predicted_track_bboxes
                             .into_iter()

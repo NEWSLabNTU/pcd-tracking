@@ -1,8 +1,10 @@
-mod config;
+pub mod config;
 mod iou_matrix;
 mod kalman;
-mod object;
+pub mod object;
 mod track_attr_updater;
 mod track_attributes;
-mod tracker;
-mod weak_classifier;
+pub mod tracker;
+pub mod weak_classifier;
+
+pub use tracker::*;
